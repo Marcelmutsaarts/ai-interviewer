@@ -126,6 +126,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updated_at: new Date().toISOString(),
     }
 
+    // DEBUG: Log what we're receiving
+    console.log(`[Config PUT] Received data for project ${projectId}:`, {
+      systemPrompt_length: result.data.systemPrompt?.length,
+      systemPrompt_preview: result.data.systemPrompt?.substring(0, 200),
+      goal: result.data.goal,
+      toneOfVoice: result.data.toneOfVoice,
+      maxQuestions: result.data.maxQuestions,
+    })
+
     if (result.data.systemPrompt !== undefined) updateData.system_prompt = result.data.systemPrompt
     if (result.data.goal !== undefined) updateData.interview_goal = result.data.goal
     if (result.data.toneOfVoice !== undefined) updateData.tone_of_voice = result.data.toneOfVoice
@@ -135,6 +144,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (result.data.topics !== undefined) updateData.topics = result.data.topics
     if (result.data.additionalInstructions !== undefined) updateData.additional_instructions = result.data.additionalInstructions
 
+    // DEBUG: Log what we're about to save
+    console.log(`[Config PUT] Saving to database:`, {
+      updateData_keys: Object.keys(updateData),
+      system_prompt_in_update: 'system_prompt' in updateData,
+      system_prompt_length: (updateData.system_prompt as string)?.length,
+    })
+
     // Update configuration
     const { data: config, error } = await supabase
       .from('project_config')
@@ -142,6 +158,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .eq('project_id', projectId)
       .select()
       .single()
+
+    // DEBUG: Log what was returned after update
+    console.log(`[Config PUT] After update, database returned:`, {
+      system_prompt_length: config?.system_prompt?.length,
+      system_prompt_preview: config?.system_prompt?.substring(0, 200),
+      updated_at: config?.updated_at,
+    })
 
     if (error) {
       console.error('Error updating config:', error)

@@ -60,6 +60,16 @@ export async function POST(request: NextRequest) {
       .eq('project_id', projectId)
       .single()
 
+    // DEBUG: Log what we're getting from the database
+    console.log(`[Token] Fetched config for project ${projectId}:`, {
+      system_prompt_length: config?.system_prompt?.length,
+      system_prompt_preview: config?.system_prompt?.substring(0, 200),
+      interview_goal: config?.interview_goal,
+      tone_of_voice: config?.tone_of_voice,
+      max_questions: config?.max_questions,
+      updated_at: config?.updated_at,
+    })
+
     if (configError || !config) {
       const response = NextResponse.json({ error: 'Configuratie niet gevonden' }, { status: 404 })
       response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
