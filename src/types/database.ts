@@ -80,6 +80,8 @@ export type Database = {
           language: string | null
           welcome_message: string | null
           closing_message: string | null
+          topics: string[] | null
+          additional_instructions: string | null
           created_at: string
           updated_at: string
         }
@@ -94,6 +96,8 @@ export type Database = {
           language?: string | null
           welcome_message?: string | null
           closing_message?: string | null
+          topics?: string[] | null
+          additional_instructions?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -108,6 +112,8 @@ export type Database = {
           language?: string | null
           welcome_message?: string | null
           closing_message?: string | null
+          topics?: string[] | null
+          additional_instructions?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -293,19 +299,15 @@ export type Session = InterviewSession
 export type TranscriptMessage = Transcript
 
 /**
- * Configuration type extends ProjectConfig with UI-specific fields.
- * Used for the configuration management UI which needs additional fields
- * not stored in the database.
+ * Configuration type extends ProjectConfig with UI-specific computed fields.
+ * Used for the configuration management UI which needs additional computed fields
+ * beyond what is stored in the database.
  */
 export interface Configuration extends ProjectConfig {
   /** Alias for interview_goal - for backward compatibility */
   goal?: string | null
-  /** UI state: whether the configuration is complete */
+  /** UI state: whether the configuration is complete (computed server-side) */
   is_complete?: boolean
-  /** Topics extracted from the configuration (stored in system_prompt) */
-  topics?: string[] | null
-  /** Additional instructions (stored in system_prompt) */
-  additional_instructions?: string | null
   /** Configuration method used */
   config_method?: 'ai_chat' | 'direct_input' | null
 }

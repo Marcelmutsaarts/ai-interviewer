@@ -112,8 +112,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (result.data.maxQuestions !== undefined) updateData.max_questions = result.data.maxQuestions
     if (result.data.welcomeMessage !== undefined) updateData.welcome_message = result.data.welcomeMessage
     if (result.data.closingMessage !== undefined) updateData.closing_message = result.data.closingMessage
-    // Note: topics and additional_instructions are not in the current database schema
-    // They may need to be stored in a different way or the schema needs to be updated
+    if (result.data.topics !== undefined) updateData.topics = result.data.topics
+    if (result.data.additionalInstructions !== undefined) updateData.additional_instructions = result.data.additionalInstructions
 
     // Update configuration
     const { data: config, error } = await supabase

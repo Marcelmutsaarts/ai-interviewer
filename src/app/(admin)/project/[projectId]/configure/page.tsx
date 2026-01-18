@@ -221,13 +221,14 @@ export default function ConfigurePage() {
     setIsUpdating(true)
     try {
       // Merge updated values with existing configuration for system prompt generation
+      // Note: topics and additional_instructions are now real database columns
       const mergedGoal = updatedConfig.goal ?? configuration?.interview_goal ?? configuration?.goal ?? ''
       const mergedToneOfVoice = updatedConfig.tone_of_voice ?? configuration?.tone_of_voice ?? 'friendly'
       const mergedMaxQuestions = updatedConfig.max_questions ?? configuration?.max_questions ?? 8
       const mergedWelcomeMessage = updatedConfig.welcome_message ?? configuration?.welcome_message
       const mergedClosingMessage = updatedConfig.closing_message ?? configuration?.closing_message
-      const mergedTopics = configuration?.topics ?? []
-      const mergedAdditionalInstructions = configuration?.additional_instructions
+      const mergedTopics = updatedConfig.topics ?? configuration?.topics ?? []
+      const mergedAdditionalInstructions = updatedConfig.additional_instructions ?? configuration?.additional_instructions
 
       // Regenerate system prompt with updated values
       const newSystemPrompt = generateSystemPrompt({
@@ -249,6 +250,8 @@ export default function ConfigurePage() {
           maxQuestions: updatedConfig.max_questions,
           welcomeMessage: updatedConfig.welcome_message,
           closingMessage: updatedConfig.closing_message,
+          topics: updatedConfig.topics,
+          additionalInstructions: updatedConfig.additional_instructions,
           systemPrompt: newSystemPrompt,
         }),
       })
