@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getAdminFromSession } from '@/lib/auth/session'
 import { updateConfigurationSchema } from '@/lib/validation/schemas'
 
+// Disable caching for this route to ensure fresh configuration data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface RouteParams {
   params: Promise<{ projectId: string }>
 }
@@ -14,7 +18,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const admin = await getAdminFromSession()
 
     if (!admin) {
-      return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      const response = NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const supabase = await createClient()
@@ -28,7 +34,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .single()
 
     if (!project) {
-      return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      const response = NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Get configuration
@@ -40,7 +48,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       console.error('Error fetching config:', error)
-      return NextResponse.json({ error: 'Kan configuratie niet ophalen' }, { status: 500 })
+      const response = NextResponse.json({ error: 'Kan configuratie niet ophalen' }, { status: 500 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Compute is_complete based on required fields being populated
@@ -57,14 +67,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     )
 
     // Return configuration with computed is_complete field and goal alias
-    return NextResponse.json({
+    const response = NextResponse.json({
       ...config,
       is_complete: isComplete,
       goal: config.interview_goal, // Alias for backward compatibility
     })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   } catch (error) {
     console.error('Config GET error:', error)
-    return NextResponse.json({ error: 'Interne serverfout' }, { status: 500 })
+    const response = NextResponse.json({ error: 'Interne serverfout' }, { status: 500 })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   }
 }
 
@@ -75,7 +89,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const admin = await getAdminFromSession()
 
     if (!admin) {
-      return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      const response = NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const body = await request.json()
@@ -84,7 +100,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const result = updateConfigurationSchema.safeParse(body)
     if (!result.success) {
       const firstError = result.error.issues[0]
-      return NextResponse.json({ error: firstError.message }, { status: 400 })
+      const response = NextResponse.json({ error: firstError.message }, { status: 400 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const supabase = await createClient()
@@ -98,7 +116,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .single()
 
     if (!project) {
-      return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      const response = NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Map camelCase to snake_case for database
@@ -125,12 +145,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       console.error('Error updating config:', error)
-      return NextResponse.json({ error: 'Kan configuratie niet bijwerken' }, { status: 500 })
+      const response = NextResponse.json({ error: 'Kan configuratie niet bijwerken' }, { status: 500 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
-    return NextResponse.json(config)
+    const response = NextResponse.json(config)
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   } catch (error) {
     console.error('Config PUT error:', error)
-    return NextResponse.json({ error: 'Interne serverfout' }, { status: 500 })
+    const response = NextResponse.json({ error: 'Interne serverfout' }, { status: 500 })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   }
 }

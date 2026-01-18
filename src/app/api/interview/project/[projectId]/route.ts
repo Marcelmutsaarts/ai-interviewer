@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// Disable caching for this route to ensure fresh configuration data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface RouteParams {
   params: Promise<{ projectId: string }>
 }
@@ -11,7 +15,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { projectId } = await params
 
     if (!projectId) {
-      return NextResponse.json({ error: 'Project ID is vereist' }, { status: 400 })
+      const response = NextResponse.json({ error: 'Project ID is vereist' }, { status: 400 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const supabase = await createClient()
@@ -34,7 +40,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .single()
 
     if (projectError || !project) {
-      return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      const response = NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Type the configuration properly
@@ -43,7 +51,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       : project.project_config
 
     // Return public info only
-    return NextResponse.json({
+    const response = NextResponse.json({
       id: project.id,
       name: project.name,
       description: project.description,
@@ -52,11 +60,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       welcomeMessage: config?.welcome_message || null,
       isConfigured: !!config?.system_prompt,
     })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   } catch (error) {
     console.error('Project info error:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Er is een fout opgetreden' },
       { status: 500 }
     )
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   }
 }

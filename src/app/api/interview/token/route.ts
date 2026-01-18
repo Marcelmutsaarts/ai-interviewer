@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { INTERVIEW_SYSTEM_ADDITIONS, OPENAI_REALTIME_MODEL_DEFAULT } from '@/lib/utils/constants'
 import { tokenRateLimiter } from '@/lib/utils/rate-limiter'
 
+// Disable caching for this route to ensure fresh configuration data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // POST /api/interview/token - Get ephemeral token from OpenAI Realtime Sessions API
 export async function POST(request: NextRequest) {
   try {
@@ -10,15 +14,19 @@ export async function POST(request: NextRequest) {
     const { projectId } = body
 
     if (!projectId) {
-      return NextResponse.json({ error: 'Project ID is vereist' }, { status: 400 })
+      const response = NextResponse.json({ error: 'Project ID is vereist' }, { status: 400 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Rate limiting: 10 tokens per project per minute
     if (!tokenRateLimiter.isAllowed(projectId)) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Te veel verzoeken. Probeer het over een minuut opnieuw.' },
         { status: 429 }
       )
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const supabase = await createClient()
@@ -31,14 +39,18 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (projectError || !project) {
-      return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      const response = NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     if (!project.is_active) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Dit interview is momenteel niet beschikbaar' },
         { status: 403 }
       )
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Get configuration
@@ -49,7 +61,9 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (configError || !config) {
-      return NextResponse.json({ error: 'Configuratie niet gevonden' }, { status: 404 })
+      const response = NextResponse.json({ error: 'Configuratie niet gevonden' }, { status: 404 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Build the full system prompt
@@ -69,10 +83,12 @@ ${INTERVIEW_SYSTEM_ADDITIONS}`
 
     if (!openaiApiKey) {
       console.error('OPENAI_API_KEY not configured')
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Server configuratie fout' },
         { status: 500 }
       )
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Use environment variable for model version with fallback to default
@@ -95,15 +111,17 @@ ${INTERVIEW_SYSTEM_ADDITIONS}`
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
       console.error('OpenAI token request failed:', errorText)
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Kon geen verbinding maken met de AI service' },
         { status: 500 }
       )
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const tokenData = await tokenResponse.json()
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       token: tokenData.client_secret?.value || tokenData.client_secret,
       config: {
         systemPrompt: fullSystemPrompt,
@@ -113,11 +131,15 @@ ${INTERVIEW_SYSTEM_ADDITIONS}`
         voice: 'alloy' as const,
       },
     })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   } catch (error) {
     console.error('Token endpoint error:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Er is een fout opgetreden' },
       { status: 500 }
     )
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   }
 }

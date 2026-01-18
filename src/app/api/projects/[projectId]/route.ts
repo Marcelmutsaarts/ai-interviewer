@@ -3,6 +3,10 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { updateProjectSchema } from '@/lib/validation/schemas'
 import { getAdminFromSession } from '@/lib/auth/session'
 
+// Disable caching for this route to ensure fresh data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Helper to verify project ownership
 async function verifyProjectOwnership(adminId: string, projectId: string) {
   const supabase = await createClient()
@@ -27,7 +31,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const admin = await getAdminFromSession()
 
     if (!admin) {
-      return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      const response = NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const supabase = await createClient()
@@ -44,7 +50,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .single()
 
     if (error || !project) {
-      return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      const response = NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Transform the response - project_config comes as an object due to one-to-one relationship
@@ -54,7 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const configs = projectData.project_config
     const configuration = Array.isArray(configs) ? configs[0] : configs
 
-    const response = {
+    const responseData = {
       id: project.id,
       admin_id: project.admin_id,
       name: project.name,
@@ -65,13 +73,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       configuration: configuration || null,
     }
 
-    return NextResponse.json(response)
+    const response = NextResponse.json(responseData)
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   } catch (error) {
     console.error('Error fetching project:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Kan project niet ophalen' },
       { status: 500 }
     )
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   }
 }
 
@@ -82,13 +94,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const admin = await getAdminFromSession()
 
     if (!admin) {
-      return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      const response = NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Verify ownership
     const isOwner = await verifyProjectOwnership(admin.id, projectId)
     if (!isOwner) {
-      return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      const response = NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const body = await request.json()
@@ -97,7 +113,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const parseResult = updateProjectSchema.safeParse(body)
     if (!parseResult.success) {
       const firstError = parseResult.error.issues[0]
-      return NextResponse.json({ error: firstError.message }, { status: 400 })
+      const response = NextResponse.json({ error: firstError.message }, { status: 400 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Convert status to is_active if present
@@ -125,19 +143,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (error || !project) {
       console.error('Failed to update project:', error)
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Kan project niet bijwerken' },
         { status: 500 }
       )
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
-    return NextResponse.json(project)
+    const response = NextResponse.json(project)
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   } catch (error) {
     console.error('Error updating project:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Kan project niet bijwerken' },
       { status: 500 }
     )
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   }
 }
 
@@ -148,13 +172,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const admin = await getAdminFromSession()
 
     if (!admin) {
-      return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      const response = NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     // Verify ownership
     const isOwner = await verifyProjectOwnership(admin.id, projectId)
     if (!isOwner) {
-      return NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      const response = NextResponse.json({ error: 'Project niet gevonden' }, { status: 404 })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
     const supabase = await createClient()
@@ -197,18 +225,24 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       console.error('Failed to delete project:', error)
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Kan project niet verwijderen' },
         { status: 500 }
       )
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+      return response
     }
 
-    return NextResponse.json({ success: true })
+    const response = NextResponse.json({ success: true })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   } catch (error) {
     console.error('Error deleting project:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Kan project niet verwijderen' },
       { status: 500 }
     )
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    return response
   }
 }
