@@ -13,6 +13,7 @@ import { useConfigStore } from '@/stores/configStore'
 import { useToastStore } from '@/stores/toastStore'
 import { v4 as uuidv4 } from 'uuid'
 import type { Configuration } from '@/types/database'
+import { generateSystemPrompt } from '@/lib/ai/configuration-generator'
 
 // Lazy load heavy components for better performance
 const ChatWindow = dynamic(
@@ -212,8 +213,33 @@ export default function ConfigurePage() {
   }
 
   const handleConfigurationUpdate = useCallback(async (updatedConfig: Partial<Configuration>) => {
+    if (!configuration) {
+      addToast({ type: 'error', message: 'Geen bestaande configuratie gevonden' })
+      return
+    }
+
     setIsUpdating(true)
     try {
+      // Merge updated values with existing configuration for system prompt generation
+      const mergedGoal = updatedConfig.goal ?? configuration?.interview_goal ?? configuration?.goal ?? ''
+      const mergedToneOfVoice = updatedConfig.tone_of_voice ?? configuration?.tone_of_voice ?? 'friendly'
+      const mergedMaxQuestions = updatedConfig.max_questions ?? configuration?.max_questions ?? 8
+      const mergedWelcomeMessage = updatedConfig.welcome_message ?? configuration?.welcome_message
+      const mergedClosingMessage = updatedConfig.closing_message ?? configuration?.closing_message
+      const mergedTopics = configuration?.topics ?? []
+      const mergedAdditionalInstructions = configuration?.additional_instructions
+
+      // Regenerate system prompt with updated values
+      const newSystemPrompt = generateSystemPrompt({
+        goal: mergedGoal,
+        toneOfVoice: mergedToneOfVoice,
+        maxQuestions: mergedMaxQuestions,
+        welcomeMessage: mergedWelcomeMessage,
+        closingMessage: mergedClosingMessage,
+        topics: mergedTopics,
+        additionalInstructions: mergedAdditionalInstructions,
+      })
+
       const response = await fetch(`/api/projects/${projectId}/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -223,6 +249,7 @@ export default function ConfigurePage() {
           maxQuestions: updatedConfig.max_questions,
           welcomeMessage: updatedConfig.welcome_message,
           closingMessage: updatedConfig.closing_message,
+          systemPrompt: newSystemPrompt,
         }),
       })
 
@@ -239,7 +266,7 @@ export default function ConfigurePage() {
     } finally {
       setIsUpdating(false)
     }
-  }, [projectId, mutateConfig, addToast])
+  }, [projectId, configuration, mutateConfig, addToast])
 
   if (projectLoading || configLoading) {
     return (
